@@ -1,0 +1,604 @@
+{
+    "name": "Monitor Unassigned-deals and assign them!",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "daysInterval": 2,
+                "triggerAtHour": 7
+              }
+            ]
+          }
+        },
+        "id": "e087fb9b-d299-441b-8508-a36a389acb0d",
+        "name": "Schedule Trigger",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "position": [
+          480,
+          0
+        ],
+        "typeVersion": 1.1
+      },
+      {
+        "parameters": {
+          "url": "=https://api.hubapi.com/crm/v3/objects/deals?properties=dealname,amount,hubspot_owner_id,&associations=contacts",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotOAuth2Api",
+          "options": {}
+        },
+        "id": "5d272d3d-7b35-4ac3-8646-28d7136b3e5b",
+        "name": "Get Deals",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          680,
+          0
+        ],
+        "typeVersion": 4.1,
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $json.associations.contacts.results[0].id }}?associations=company",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotOAuth2Api",
+          "sendQuery": true,
+          "specifyQuery": "json",
+          "jsonQuery": "[\n  {\n    \"name\": \"properties\",\n    \"value\": \"firstname,lastname,country,company\"\n  }\n]\n",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "authorization",
+                "value": "Bearer YOUR_ACCESS_TOKEN"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "26862c28-fc42-41f5-9435-c69082282e8a",
+        "name": "Get contact for deals",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1320,
+          0
+        ],
+        "typeVersion": 4.1,
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "2ad0a847-9729-4528-94d1-edf133f51c76",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                },
+                "leftValue": "={{ $json.properties.hubspot_owner_id }}",
+                "rightValue": ""
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "d2281e4c-abaf-43da-9299-ea60eaf61d49",
+        "name": "Unassigned Deals",
+        "type": "n8n-nodes-base.filter",
+        "position": [
+          1100,
+          0
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "results",
+          "options": {}
+        },
+        "id": "aebd4001-6693-4b04-acc6-be27cb374f92",
+        "name": "Split out deals",
+        "type": "n8n-nodes-base.splitOut",
+        "position": [
+          900,
+          0
+        ],
+        "typeVersion": 1
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "leftValue": "={{ $json.properties.country }}",
+                      "rightValue": "US",
+                      "id": "51ac7b46-7716-45d3-8dfc-707f1624fe3a"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "US"
+              }
+            ]
+          },
+          "options": {
+            "fallbackOutput": "extra"
+          }
+        },
+        "id": "1aeb829d-7683-429f-b806-1e223111d0b0",
+        "name": "Assign by Region",
+        "type": "n8n-nodes-base.switch",
+        "position": [
+          1780,
+          0
+        ],
+        "typeVersion": 3
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "id": "2f8e57b1-2fce-49b4-8bae-cf6b0164d1f0",
+                      "operator": {
+                        "type": "number",
+                        "operation": "lte"
+                      },
+                      "leftValue": "={{ $json.properties.numberofemployees }}",
+                      "rightValue": 999
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Max"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "id": "4357fb25-fbe5-4b19-85df-62db07d4443b",
+                      "operator": {
+                        "type": "number",
+                        "operation": "gte"
+                      },
+                      "leftValue": "={{ $json.properties.numberofemployees }}",
+                      "rightValue": 1000
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Eeden"
+              }
+            ]
+          },
+          "options": {
+            "looseTypeValidation": true
+          }
+        },
+        "id": "<ASSIGN_BY_REGION_NODE_ID>",
+        "name": "Assign US deals by company size",
+        "type": "n8n-nodes-base.switch",
+        "position": [
+          2060,
+          -340
+        ],
+        "typeVersion": 3
+      },
+      {
+        "parameters": {
+          "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.associations.companies.results[0].id }}?properties=name,domain,city,country,state,numberofemployees",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotOAuth2Api",
+          "options": {}
+        },
+        "id": "775fae16-8ca3-436c-bb4b-7bf4e1af2141",
+        "name": "Get company of contact(s)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1540,
+          0
+        ],
+        "typeVersion": 4.1,
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "deal",
+          "operation": "update",
+          "dealId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Unassigned Deals').item.json.id }}"
+          },
+          "updateFields": {
+            "dealOwner": {
+              "__rl": true,
+              "mode": "list",
+              "value": "<sales_teammate_id>",
+              "cachedResultName": "<sales_teammate_email.com>"
+            }
+          }
+        },
+        "id": "aa310e68-4056-44b6-8074-a26ce5d2d21a",
+        "name": "Assign to Sales teammate-3",
+        "type": "n8n-nodes-base.hubspot",
+        "position": [
+          2080,
+          240
+        ],
+        "typeVersion": 2,
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "deal",
+          "operation": "update",
+          "dealId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Unassigned Deals').item.json.id }}"
+          },
+          "updateFields": {
+            "dealOwner": {
+              "__rl": true,
+              "value": "<sales_teammate_id>",
+              "mode": "list",
+              "cachedResultName": "<sales_teammate_email.com>"
+            }
+          }
+        },
+        "id": "212cc657-88df-406e-856d-00a797ac39eb",
+        "name": "Assign to Sales teammate-1",
+        "type": "n8n-nodes-base.hubspot",
+        "position": [
+          2360,
+          -500
+        ],
+        "typeVersion": 2,
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "deal",
+          "operation": "update",
+          "dealId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Unassigned Deals').item.json.id }}"
+          },
+          "updateFields": {
+            "dealOwner": {
+              "__rl": true,
+              "value": "<sales_teammate_id>",
+              "mode": "list",
+              "cachedResultName": "<sales_teammate_email.com>"
+            }
+          }
+        },
+        "id": "7daef91a-051b-495a-9122-d737fff97c04",
+        "name": "Assign to Sales teammate-2",
+        "type": "n8n-nodes-base.hubspot",
+        "position": [
+          2360,
+          -160
+        ],
+        "typeVersion": 2,
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "select": "user",
+          "user": {
+            "__rl": true,
+            "value": "U08F5DXPH8C",
+            "mode": "list",
+            "cachedResultName": "<sales_teammate_slack_username>"
+          },
+          "text": "New Deal assigned!",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          2580,
+          -500
+        ],
+        "id": "a02495ad-c3ed-4ae7-a1f6-6093ae60eab8",
+        "name": "Slack Message on deal assigning -1",
+        "webhookId": "d9e48283-5c36-4e1e-9410-a6457368e314",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "<SLACK_API_CREDENTIAL_ID>",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "select": "user",
+          "user": {
+            "__rl": true,
+            "value": "<sales_teammate_id>",
+            "mode": "list",
+            "cachedResultName": "<sales_teammate_slack_username>"
+          },
+          "text": "New Deal assigned!",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          2580,
+          -160
+        ],
+        "id": "87522f47-d102-4b2d-8fb2-0a9aac532314",
+        "name": "Slack Message on deal assigning -2",
+        "webhookId": "d9e48283-5c36-4e1e-9410-a6457368e314",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "<SLACK_API_CREDENTIAL_ID>",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "select": "user",
+          "user": {
+            "__rl": true,
+            "value": "<sales_teammate_id>",
+            "mode": "list",
+            "cachedResultName": "<sales_teammate_slack_username>"
+          },
+          "text": "New Deal assigned!",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          2340,
+          240
+        ],
+        "id": "1c0343df-833d-49a7-b01d-576692b98744",
+        "name": "Slack Message on deal assigning - 3",
+        "webhookId": "d9e48283-5c36-4e1e-9410-a6457368e314",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "<SLACK_API_CREDENTIAL_ID>",
+            "name": "Slack account"
+          }
+        }
+      }
+    ],
+    "pinData": {},
+    "connections": {
+      "Get Deals": {
+        "main": [
+          [
+            {
+              "node": "Split out deals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split out deals": {
+        "main": [
+          [
+            {
+              "node": "Unassigned Deals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Assign by Region": {
+        "main": [
+          [
+            {
+              "node": "Assign US deals by company size",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Assign to Sales teammate-3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Get Deals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Unassigned Deals": {
+        "main": [
+          [
+            {
+              "node": "Get contact for deals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get contact for deals": {
+        "main": [
+          [
+            {
+              "node": "Get company of contact(s)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Assign US deals by company size": {
+        "main": [
+          [
+            {
+              "node": "Assign to Sales teammate-1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Assign to Sales teammate-2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get company of contact(s)": {
+        "main": [
+          [
+            {
+              "node": "Assign by Region",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Assign to Sales teammate-1": {
+        "main": [
+          [
+            {
+              "node": "Slack Message on deal assigning -1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Assign to Sales teammate-2": {
+        "main": [
+          [
+            {
+              "node": "Slack Message on deal assigning -2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Assign to Sales teammate-3": {
+        "main": [
+          [
+            {
+              "node": "Slack Message on deal assigning - 3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "versionId": "39b9196b-73b9-4857-bdf9-bef8c4e0286a",
+    "meta": {
+      "templateId": "2117",
+      "templateCredsSetupCompleted": true,
+      "instanceId": "208782204c66c6411e0a676d316ab935bf69a10b28de9a33fdee613874749a2d"
+    },
+    "id": "FKqyvr75zk6LPLCt",
+    "tags": []
+  }
