@@ -1,0 +1,416 @@
+{
+    "name": "SalesReady - Verified Lead Engine",
+    "nodes": [
+      {
+        "parameters": {
+          "formTitle": "New Lead to Deal Creation",
+          "formDescription": "A new lead can add details about the proposal and requirements through this form.",
+          "formFields": {
+            "values": [
+              {
+                "fieldLabel": "First Name",
+                "placeholder": "Enter your first name.",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Last Name",
+                "placeholder": "Enter your last name.",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Work Email",
+                "fieldType": "email",
+                "placeholder": "Enter your work email-id",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Company Name",
+                "placeholder": "Enter your organization's name",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "City",
+                "placeholder": "Enter the city",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "State / Region",
+                "placeholder": "Enter the state",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Country / Region",
+                "placeholder": "Enter the country",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Company Size",
+                "fieldType": "number",
+                "placeholder": "Enter the company size",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Contact Number",
+                "fieldType": "number",
+                "placeholder": "Enter the contact number ",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Pain Point",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Job Title",
+                "requiredField": true
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.formTrigger",
+        "typeVersion": 2.2,
+        "position": [
+          -1900,
+          -180
+        ],
+        "id": "<FORM_FOR_LEADS_NODE_ID>",
+        "name": "Form for Leads",
+        "webhookId": "075bd3bd-af0d-4f7e-8537-27ea2a48bb8d"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "54d84c8a-63ee-40ed-8fb2-301fff0194ba",
+                "operator": {
+                  "name": "filter.operator.equals",
+                  "type": "string",
+                  "operation": "equals"
+                },
+                "leftValue": "={{ $json.status }}",
+                "rightValue": "valid"
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "11b168da-2c54-4af4-9f02-cc5078955fec",
+        "name": "Check if the email is valid",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          -1400,
+          -180
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "sendTo": "=<sales_teammate_email>",
+          "subject": "={{ $json.subject }}",
+          "message": "={{ $json.html }}",
+          "options": {
+            "appendAttribution": false,
+            "senderName": "<Sender Name>"
+          }
+        },
+        "id": "ea3b9fd7-49c8-4353-a0e5-b33d387e6b9b",
+        "name": "Send outreach email",
+        "type": "n8n-nodes-base.gmail",
+        "position": [
+          -80,
+          -340
+        ],
+        "typeVersion": 2.1,
+        "webhookId": "a20c3c28-4dba-4fda-9b46-caff77143715",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "<YOUR_GMAIL_API_CREDENTIAL_ID>",
+            "name": "Gmail account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "<SLACK_CHANNEL_ID>",
+            "mode": "list",
+            "cachedResultName": "suspicious-leads"
+          },
+          "text": "=A lead with email id :  {{ $json.email }} \nHuter.io analysed it as {{ $json.result }}\nHunter Score: {{ $json.score }}\nDo the needful action!",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          -1180,
+          -40
+        ],
+        "id": "6162abbc-dc61-4f60-8d3d-32d0ec0d37c6",
+        "name": "Slack message for suspicious leads",
+        "webhookId": "31930bc5-fc3c-4fc0-bb3c-5527a560ba0d",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "<SLACK_SUSPICIOUS_LEADS_CHANNEL_ID>",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "email": "={{ $('Form for Leads').item.json[\"Work Email\"] }}",
+          "additionalFields": {
+            "city": "={{ $('Form for Leads').item.json.City }}",
+            "companyName": "={{ $('Form for Leads').item.json[\"Company Name\"] }}",
+            "companySize": "={{ $('Form for Leads').item.json[\"Company Size\"] }}",
+            "country": "={{ $('Form for Leads').item.json[\"Country / Region\"] }}",
+            "firstName": "={{ $('Form for Leads').item.json[\"First Name\"] }}",
+            "lastName": "={{ $('Form for Leads').item.json[\"Last Name\"] }}",
+            "phoneNumber": "={{ $('Form for Leads').item.json[\"Contact Number\"] }}",
+            "stateRegion": "={{ $('Form for Leads').item.json[\"State / Region\"] }}"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.hubspot",
+        "typeVersion": 2.1,
+        "position": [
+          -1160,
+          -340
+        ],
+        "id": "2fae9f50-9b4d-494c-9740-58856f1b2144",
+        "name": "Create or update Contact",
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_API_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "f3ecc873-2d60-4f2d-bc40-81f9379c725b",
+                "name": "html",
+                "type": "string",
+                "value": "=Hello,\n\nThank you for filling out our form. We are excited to be able to help you.\n\nWe would get back to you soon.\n\nCheers,\nRadixweb"
+              },
+              {
+                "id": "9f4f5b68-984b-415e-a110-a35ded22dd41",
+                "name": "subject",
+                "type": "string",
+                "value": "Acknowledgement Mail"
+              },
+              {
+                "id": "5362aa67-f3fa-4a6e-b6e8-4c50cc7a3192",
+                "name": "to",
+                "type": "string",
+                "value": "={{ $('Hunter').item.json.email }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "3a7aea0c-1f9a-4adb-81f7-4081ce052542",
+        "name": "Draft the mail",
+        "type": "n8n-nodes-base.set",
+        "position": [
+          -300,
+          -340
+        ],
+        "typeVersion": 3.3
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "<SLACK_NEW_LEADS_CHANNEL_ID>",
+            "mode": "list",
+            "cachedResultName": "new-lead-alerts"
+          },
+          "text": "=A new lead has arrived! \nName: {{ $json.properties.name.value }}\nNo. Of employess: {{ $json.properties.numberofemployees.value }}\nCheck Hubspot!!",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          -580,
+          -340
+        ],
+        "id": "d9e7e794-c85c-4f19-9077-f61d1ca8058c",
+        "name": "Slack update on new lead arrival",
+        "webhookId": "aea84776-49a2-4753-8d9e-4273b24b6c29",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "<SLACK_ACCOUNT_ID",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "company",
+          "name": "={{ $json.properties.company.value }}",
+          "additionalFields": {
+            "city": "={{ $json.properties.city.value }}",
+            "companyDomainName": "={{ $json.properties.hs_email_domain.value }}",
+            "countryRegion": "={{ $json.properties.country.value }}",
+            "numberOfEmployees": "={{ $json.properties.company_size.value }}",
+            "stateRegion": "={{ $json.properties.state.value }}"
+          }
+        },
+        "type": "n8n-nodes-base.hubspot",
+        "typeVersion": 2.1,
+        "position": [
+          -880,
+          -340
+        ],
+        "id": "278e1876-d790-431b-a357-8a87efa51e03",
+        "name": "Create Company",
+        "credentials": {
+          "hubspotOAuth2Api": {
+            "id": "<YOUR_HUBSPOT_CREDENTIAL_ID>",
+            "name": "HubSpot account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "emailVerifier",
+          "email": "={{ $json[\"Work Email\"] }}"
+        },
+        "type": "n8n-nodes-base.hunter",
+        "typeVersion": 1,
+        "position": [
+          -1640,
+          -180
+        ],
+        "id": "58a9dca0-2778-489a-bbd4-7c349900c08e",
+        "name": "Hunter",
+        "credentials": {
+          "hunterApi": {
+            "id": "<YOUR_HUNTER_CREDENTIAL_ID>",
+            "name": "Hunter account"
+          }
+        }
+      }
+    ],
+    "pinData": {},
+    "connections": {
+      "Form for Leads": {
+        "main": [
+          [
+            {
+              "node": "Hunter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check if the email is valid": {
+        "main": [
+          [
+            {
+              "node": "Create or update Contact",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Slack message for suspicious leads",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send outreach email": {
+        "main": [
+          []
+        ]
+      },
+      "Create or update Contact": {
+        "main": [
+          [
+            {
+              "node": "Create Company",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Draft the mail": {
+        "main": [
+          [
+            {
+              "node": "Send outreach email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Slack update on new lead arrival": {
+        "main": [
+          [
+            {
+              "node": "Draft the mail",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Company": {
+        "main": [
+          [
+            {
+              "node": "Slack update on new lead arrival",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Hunter": {
+        "main": [
+          [
+            {
+              "node": "Check if the email is valid",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "versionId": "637e2be9-cb80-4adc-aa17-be2fa8770f13",
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "208782204c66c6411e0a676d316ab935bf69a10b28de9a33fdee613874749a2d"
+    },
+    "id": "RyD7EmnY2ByN4A52",
+    "tags": []
+  }
