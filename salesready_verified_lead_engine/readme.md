@@ -73,6 +73,7 @@ This automated workflow streamlines the lead management process by:
 - Select the downloaded JSON file
 
 ### 2. Configure Credentials
+This set-up is with respect to n8n cloud.
 
 #### HubSpot Setup
 1. Go to HubSpot Developer Portal
